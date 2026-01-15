@@ -5,20 +5,21 @@ import os
 from flask import Flask
 from threading import Thread
 
-# --- جزء الويب لخدعة ريندر ---
+# --- إضافة سيرفر ويب لفتح المنفذ ---
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "البوت يعمل الآن!"
+    return "البوت مستيقظ ويعمل!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    # Render يبحث تلقائياً عن المنفذ 8080 أو 10000
+    app.run(host='0.0.0.0', port=10000)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
-# -------------------------
+# --------------------------------
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -26,7 +27,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'✅ {bot.user} متصل الآن')
+    print(f'✅ سجل البوت دخوله باسم: {bot.user}')
 
 @bot.event
 async def on_message(message):
@@ -46,13 +47,13 @@ async def on_message(message):
                 data = response.json()['data']
                 await message.channel.send(f"📖 **{data['surah']['name']}** ({data['numberInSurah']}):\n> {data['text']}")
             else:
-                await message.channel.send("❌ تأكد من اسم السورة ورقم الآية.")
+                await message.channel.send("❌ عذراً، لم أجد هذه الآية. تأكد من كتابة: (اسم السورة : رقم الآية)")
         except:
             pass
 
     await bot.process_commands(message)
 
-# تشغيل سيرفر الويب ثم البوت
+# البدء بتشغيل سيرفر الويب ثم البوت
 keep_alive()
 token = os.getenv('DISCORD_TOKEN')
 bot.run(token)
