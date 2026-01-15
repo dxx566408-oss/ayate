@@ -2,57 +2,57 @@ import discord
 from discord.ext import commands
 import requests
 import os
+from flask import Flask
+from threading import Thread
 
-# إعداد الصلاحيات (Intents)
-# ضرورية لكي يتمكن البوت من قراءة الرسائل
+# --- جزء الويب لخدعة ريندر ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "البوت يعمل الآن!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+# -------------------------
+
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'✅ تم تشغيل البوت بنجاح باسم: {bot.user}')
+    print(f'✅ {bot.user} متصل الآن')
 
 @bot.event
 async def on_message(message):
-    # تجاهل رسائل البوت نفسه لكي لا يدخل في حلقة تكرار
     if message.author == bot.user:
         return
 
-    # التحقق من وجود النقطتين ":" في الرسالة
     if ":" in message.content:
         try:
-            # تقسيم الرسالة (مثال: الفاتحة : 5)
             parts = message.content.split(":")
             surah_name = parts[0].strip()
-            ayah_number = parts[1].strip()
+            ayah_num = parts[1].strip()
 
-            # طلب الآية من API القرآن الكريم (نسخة إملائية بسيطة)
-            url = f"https://api.alquran.cloud/v1/ayah/{surah_name}:{ayah_number}/ar.alafasy"
+            url = f"https://api.alquran.cloud/v1/ayah/{surah_name}:{ayah_num}/ar.alafasy"
             response = requests.get(url)
             
             if response.status_code == 200:
                 data = response.json()['data']
-                text = data['text']
-                surah_official_name = data['surah']['name']
-                num_in_surah = data['numberInSurah']
-                
-                # تنسيق الرد بشكل جميل
-                reply = f"📖 **{surah_official_name}**\n"
-                reply += f"الآية رقم ({num_in_surah}):\n"
-                reply += f"**{text}**"
-                
-                await message.channel.send(reply)
+                await message.channel.send(f"📖 **{data['surah']['name']}** ({data['numberInSurah']}):\n> {data['text']}")
             else:
-                # في حال لم يجد السورة أو الآية
-                await message.channel.send("⚠️ تأكد من كتابة اسم السورة ورقم الآية بشكل صحيح (مثال: الفاتحة : 5)")
-        
-        except Exception as e:
-            print(f"Error: {e}")
+                await message.channel.send("❌ تأكد من اسم السورة ورقم الآية.")
+        except:
+            pass
 
     await bot.process_commands(message)
 
-# جلب التوكن من إعدادات ريندر (Environment Variables)
+# تشغيل سيرفر الويب ثم البوت
+keep_alive()
 token = os.getenv('DISCORD_TOKEN')
 bot.run(token)
